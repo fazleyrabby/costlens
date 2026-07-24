@@ -1,7 +1,9 @@
 node_modules/
 dist/
 .build/
+.astro/
 .env
 .env.*
+!.env.example
 *.log
 .DS_Store
