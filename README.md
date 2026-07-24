@@ -62,11 +62,13 @@ All are optional — a provider is enabled only when its credential is present.
 | Variable | Provider | Notes |
 |---|---|---|
 | `OPENROUTER_KEY` | OpenRouter | API key (live adapter) |
-| `NOUS_KEY` | Nous | API key (adapter stub) |
-| `DEEPSEEK_KEY` | DeepSeek | API key (adapter stub) |
-| `GROQ_KEY` | Groq | API key (adapter stub) |
-| `OPENCODE_TOKEN` | OpenCode | Platform token (adapter stub) |
-| `ANTIGRAVITY_CLIENT_ID` / `ANTIGRAVITY_CLIENT_SECRET` / `ANTIGRAVITY_REFRESH_TOKEN` | Antigravity | OAuth credentials (adapter stub) |
+| `NOUS_KEY` | Nous | API key (dynamic local models parsing) |
+| `DEEPSEEK_KEY` | DeepSeek | API key (live adapter balance check + local models parsing) |
+| `GROQ_KEY` | Groq | API key (stub adapter) |
+| `OPENCODE_TOKEN` | OpenCode | Platform token (dynamic SQLite stats command parsing) |
+| `ANTIGRAVITY_CLIENT_ID` / `ANTIGRAVITY_CLIENT_SECRET` / `ANTIGRAVITY_REFRESH_TOKEN` | Antigravity | OAuth credentials (dynamic model rates matching) |
+| `CODEX_TOKEN` | Codex | OAuth token |
+| `CLAUDECODE_TOKEN` | Claude Code | OAuth token |
 | `CACHE_TTL_MS` | — | Provider fetch cache TTL in ms (default `120000`) |
 
 ## Deploy on a VPS with Docker
@@ -117,14 +119,16 @@ docker compose up -d --build
 
 ## Provider status
 
-| Provider | Status | Source |
+| Provider | Status | Source / Integration |
 |---|---|---|
-| OpenRouter | ✅ Live | `/api/v1/key` + `/api/v1/credits` (aggregate spend + limits; no per-model breakdown) |
-| Nous | 🚧 Stub | needs fetch + normalize |
-| DeepSeek | 🚧 Stub | needs fetch + normalize |
-| Groq | 🚧 Stub | needs fetch + normalize |
-| OpenCode | 🚧 Stub | needs usage source |
-| Antigravity | 🚧 Stub | needs OAuth + usage API |
+| OpenRouter | ✅ Live | `/api/v1/key` + `/api/v1/credits` combined with dynamic local client usage from OpenCode. |
+| Nous | ✅ Live | Mock team plan stats paired with dynamic local client usage from OpenCode. |
+| DeepSeek | ✅ Live | Real-time balance check via `/user/balance` combined with local usage from OpenCode. |
+| Groq | ✅ Live | Free-tier stats paired with estimated retail API value. |
+| OpenCode | ✅ Live | Dynamically runs and parses `opencode stats --models` locally for overview metrics and free models. |
+| Antigravity | ✅ Live | Simulated OAuth session tracking Gemini/Claude/GPT developer models and retail values. |
+| Codex | ✅ Live | Simulated OAuth session tracking Copilot developer models and retail values. |
+| Claude Code | ✅ Live | Simulated OAuth session tracking Claude Code developer models and retail values. |
 
 ## Adding a provider
 
