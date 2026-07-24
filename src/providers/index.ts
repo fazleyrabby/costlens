@@ -13,13 +13,14 @@ export async function cachedFetchAll(
   const now = Date.now();
   return Promise.all(
     configs.map(async (cfg) => {
-      const hit = cache.get(cfg.id);
+      const cacheKey = `${cfg.id}:${period.from || "all"}:${period.to || "now"}`;
+      const hit = cache.get(cacheKey);
       if (hit && hit.expires > now) return hit.value;
       const adapter = adapters[cfg.id];
       const value = adapter
         ? await adapter.fetchUsage(cfg, period)
         : errorUsage(cfg, `no adapter registered for "${cfg.id}"`);
-      cache.set(cfg.id, { value, expires: now + TTL_MS });
+      cache.set(cacheKey, { value, expires: now + TTL_MS });
       return value;
     }),
   );
@@ -30,6 +31,8 @@ import { deepseek } from "./deepseek";
 import { nous } from "./nous";
 import { opencode } from "./opencode";
 import { antigravity } from "./antigravity";
+import { codex } from "./codex";
+import { claudecode } from "./claudecode";
 
 export const adapters: Record<string, ProviderAdapter> = {
   openrouter,
@@ -38,6 +41,8 @@ export const adapters: Record<string, ProviderAdapter> = {
   nous,
   opencode,
   antigravity,
+  codex,
+  claudecode,
 };
 
 export async function fetchAll(

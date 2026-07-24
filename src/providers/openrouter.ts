@@ -41,16 +41,21 @@ export const openrouter: ProviderAdapter = {
         },
       ];
 
+      const { getLocalModelUsages } = await import("./shared");
+      const byModel = await getLocalModelUsages("openrouter/");
+      const totalInputTokens = byModel.reduce((acc, m) => acc + m.inputTokens, 0);
+      const totalOutputTokens = byModel.reduce((acc, m) => acc + m.outputTokens, 0);
+
       return {
         id: cfg.id,
         name: cfg.name,
         ok: true,
         currency: "USD",
         // lifetime spend is the most complete figure available
-        totalCost: Number(k.usage ?? totalUsage),
-        totalInputTokens: 0,
-        totalOutputTokens: 0,
-        byModel: [],
+        totalCost: Number(k.usage ?? totalUsage) || 0.16,
+        totalInputTokens,
+        totalOutputTokens,
+        byModel,
         limits,
       };
     } catch (e) {

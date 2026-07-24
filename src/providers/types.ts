@@ -1,5 +1,6 @@
 export interface ModelUsage {
   model: string;
+  provider?: string;
   inputTokens: number;
   outputTokens: number;
   requests: number;
@@ -56,6 +57,22 @@ export interface ProviderAdapter {
   fetchUsage(cfg: ProviderConfig, period: Period): Promise<ProviderUsage>;
 }
 
+export interface TimeSeriesPoint {
+  date: string; // ISO date string (YYYY-MM-DD)
+  cost: number;
+  inputTokens: number;
+  outputTokens: number;
+  requests: number;
+}
+
+export interface AIInsight {
+  id: string;
+  type: "highlight" | "warning" | "info" | "success";
+  title: string;
+  description: string;
+  metric?: string;
+}
+
 export interface AggregateUsage {
   generatedAt: string;
   providers: ProviderUsage[];
@@ -63,6 +80,19 @@ export interface AggregateUsage {
     cost: number;
     inputTokens: number;
     outputTokens: number;
+    requests: number;
     mostUsedModels: ModelUsage[];
+    previousPeriod: {
+      cost: number;
+      inputTokens: number;
+      outputTokens: number;
+      requests: number;
+    };
+    costChangePct: number;
+    inputTokenChangePct: number;
+    outputTokenChangePct: number;
+    requestChangePct: number;
   };
+  timeSeries: TimeSeriesPoint[];
+  insights: AIInsight[];
 }

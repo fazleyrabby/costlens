@@ -53,6 +53,20 @@ export function loadProviderConfigs(): ProviderConfig[] {
       refreshToken: e.ANTIGRAVITY_REFRESH_TOKEN,
       enabled: !!e.ANTIGRAVITY_REFRESH_TOKEN,
     },
+    {
+      id: "codex",
+      name: "Codex",
+      type: "oauth",
+      refreshToken: e.CODEX_TOKEN || "codex-oauth-session",
+      enabled: true,
+    },
+    {
+      id: "claudecode",
+      name: "Claude Code",
+      type: "oauth",
+      refreshToken: e.CLAUDECODE_TOKEN || "claudecode-oauth-session",
+      enabled: true,
+    },
   ];
   return defs.filter((d) => d.enabled);
 }

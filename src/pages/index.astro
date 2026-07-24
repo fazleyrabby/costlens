@@ -1,5 +1,5 @@
 ---
-const title = "CostLens";
+const title = "CostLens — AI Analytics";
 const pollMs = 30000;
 ---
 
@@ -9,86 +9,1629 @@ const pollMs = 30000;
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{title}</title>
-    <style>
-      :root { color-scheme: light dark; }
-      * { box-sizing: border-box; }
-      body { margin: 0; font: 14px/1.5 system-ui, sans-serif; padding: 1.5rem; }
-      h1 { margin: 0 0 .25rem; }
-      h2 { margin: 1.5rem 0 .5rem; font-size: 1.1rem; }
-      .muted { color: #888; }
-      .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; }
-      .card { border: 1px solid #3333; border-radius: 10px; padding: 1rem; }
-      .card .big { font-size: 1.6rem; font-weight: 600; }
-      .providers { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem; }
-      .provider .name { font-weight: 600; }
-      .badge { font-size: .7rem; padding: 0 6px; border-radius: 999px; border: 1px solid #3333; }
-      table { width: 100%; border-collapse: collapse; }
-      th, td { text-align: left; padding: .4rem .6rem; border-bottom: 1px solid #3332; }
-      td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
-      .err { color: #d33; }
-      .note { color: #a80; }
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@300;400;500;600;700&family=Geist:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script is:inline>
+      const theme = (() => {
+        if (typeof localStorage !== 'undefined' && localStorage.getItem('theme')) {
+          return localStorage.getItem('theme');
+        }
+        if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+          return 'dark';
+        }
+        return 'light';
+      })();
+      if (theme === 'dark') {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    </script>
+    <style is:global>
+      :root {
+        --bg-canvas: #F4F3EF;
+        --bg-card: #FFFFFF;
+        --bg-card-inner: #F6F5F2;
+        --bg-card-hover: #FAF9F6;
+        --border-color: #E2E0D9;
+        --border-color-hover: #B5B2A8;
+        --text-primary: #111111;
+        --text-secondary: #6E6D6A;
+        --text-tertiary: #9E9D99;
+        --accent-color: #111111;
+        --chart-line: #111111;
+        --chart-fill: rgba(17, 17, 17, 0.04);
+        --font-sans: 'Geist', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+        --font-mono: 'Geist Mono', 'SF Mono', monospace;
+
+        --badge-ok-bg: #EDF3EC;
+        --badge-ok-text: #2D5831;
+        --badge-ok-border: rgba(45, 88, 49, 0.15);
+
+        --badge-stub-bg: #FBF3DB;
+        --badge-stub-text: #825700;
+        --badge-stub-border: rgba(130, 87, 0, 0.15);
+
+        --badge-err-bg: #FDEBEC;
+        --badge-err-text: #962826;
+        --badge-err-border: rgba(150, 40, 38, 0.15);
+      }
+
+      :root.dark {
+        --bg-canvas: #121211;
+        --bg-card: #1C1C1A;
+        --bg-card-inner: #242422;
+        --bg-card-hover: #262624;
+        --border-color: #333330;
+        --border-color-hover: #555550;
+        --text-primary: #ECEBE8;
+        --text-secondary: #999894;
+        --text-tertiary: #6E6D6A;
+        --accent-color: #ECEBE8;
+        --chart-line: #ECEBE8;
+        --chart-fill: rgba(236, 235, 232, 0.04);
+
+        --badge-ok-bg: #1B2B1E;
+        --badge-ok-text: #82C288;
+        --badge-ok-border: rgba(130, 194, 136, 0.2);
+
+        --badge-stub-bg: #2E2512;
+        --badge-stub-text: #E5BE6B;
+        --badge-stub-border: rgba(229, 190, 107, 0.2);
+
+        --badge-err-bg: #2D1A1B;
+        --badge-err-text: #F08083;
+        --badge-err-border: rgba(240, 128, 131, 0.2);
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        background-color: var(--bg-canvas);
+        color: var(--text-primary);
+        font-family: var(--font-sans);
+        font-size: 13px;
+        line-height: 1.5;
+        padding: 1.5rem 1rem;
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
+        min-height: 100vh;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      .window {
+        background: var(--bg-canvas);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        width: 100%;
+        max-width: 1140px;
+        overflow: hidden;
+        box-shadow: 0 16px 36px rgba(0, 0, 0, 0.04);
+        animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      }
+
+      /* Toolbar Header */
+      .toolbar {
+        height: 48px;
+        background: var(--bg-card);
+        border-bottom: 1px solid var(--border-color);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 1rem;
+        gap: 1rem;
+      }
+
+      .toolbar-left {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        flex: 1;
+      }
+
+      .logo-mark {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-weight: 700;
+        font-size: 0.95rem;
+        letter-spacing: -0.02em;
+        color: var(--text-primary);
+      }
+
+      .search-box {
+        position: relative;
+        display: flex;
+        align-items: center;
+        width: 100%;
+        max-width: 260px;
+      }
+
+      .search-box svg {
+        position: absolute;
+        left: 0.6rem;
+        color: var(--text-tertiary);
+        pointer-events: none;
+      }
+
+      .search-box input {
+        width: 100%;
+        height: 28px;
+        background: var(--bg-canvas);
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        padding: 0 2rem 0 2rem;
+        font-family: var(--font-sans);
+        font-size: 0.75rem;
+        color: var(--text-primary);
+        outline: none;
+        transition: border-color 0.15s ease;
+      }
+
+      .search-box input:focus {
+        border-color: var(--text-primary);
+      }
+
+      .shortcut-kbd {
+        position: absolute;
+        right: 0.4rem;
+        font-family: var(--font-mono);
+        font-size: 0.65rem;
+        color: var(--text-tertiary);
+        background: var(--bg-card-inner);
+        border: 1px solid var(--border-color);
+        border-radius: 4px;
+        padding: 0.1rem 0.35rem;
+        pointer-events: none;
+      }
+
+      .toolbar-right {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      .toolbar-select, .toolbar-btn {
+        height: 28px;
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        padding: 0 0.6rem;
+        font-family: var(--font-sans);
+        font-size: 0.72rem;
+        font-weight: 500;
+        color: var(--text-secondary);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        transition: all 0.15s ease;
+        outline: none;
+      }
+
+      .toolbar-btn:hover, .toolbar-select:hover {
+        color: var(--text-primary);
+        border-color: var(--border-color-hover);
+        background: var(--bg-card-hover);
+      }
+
+      .toolbar-btn.icon-only {
+        padding: 0 0.5rem;
+      }
+
+      .dropdown-wrapper {
+        position: relative;
+      }
+
+      .dropdown-menu {
+        position: absolute;
+        right: 0;
+        top: 34px;
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+        padding: 0.3rem;
+        min-width: 130px;
+        display: none;
+        z-index: 100;
+      }
+
+      .dropdown-menu.show {
+        display: block;
+      }
+
+      .dropdown-item {
+        width: 100%;
+        text-align: left;
+        background: none;
+        border: none;
+        padding: 0.4rem 0.6rem;
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+        border-radius: 4px;
+        cursor: pointer;
+        transition: background 0.12s ease;
+      }
+
+      .dropdown-item:hover {
+        background: var(--bg-card-inner);
+        color: var(--text-primary);
+      }
+
+      /* Content layout */
+      .window-content {
+        padding: 1.5rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+      }
+
+      .section-title-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-bottom: 1px solid var(--border-color);
+        padding-bottom: 0.4rem;
+        margin-bottom: 0.75rem;
+      }
+
+      .section-search-input {
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        padding: 0.25rem 0.6rem;
+        font-family: var(--font-sans);
+        font-size: 0.72rem;
+        color: var(--text-primary);
+        outline: none;
+        width: 180px;
+        transition: border-color 0.15s ease;
+      }
+
+      .section-search-input:focus {
+        border-color: var(--text-primary);
+      }
+
+      h2 {
+        font-family: var(--font-sans);
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        font-weight: 600;
+        color: var(--text-secondary);
+      }
+
+      /* KPI Cards Grid */
+      .kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1rem;
+      }
+
+      @media (max-width: 900px) {
+        .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+      }
+
+      @media (max-width: 550px) {
+        .kpi-grid { grid-template-columns: 1fr; }
+      }
+
+      .kpi-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 1rem;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        gap: 0.6rem;
+        position: relative;
+        transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+      }
+
+      .kpi-card:hover {
+        transform: translateY(-2px);
+        border-color: var(--border-color-hover);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+      }
+
+      .kpi-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .kpi-label {
+        font-size: 0.7rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--text-secondary);
+      }
+
+      .kpi-icon {
+        color: var(--text-tertiary);
+      }
+
+      .kpi-body {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 0.5rem;
+      }
+
+      .kpi-value {
+        font-size: 1.6rem;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+        color: var(--text-primary);
+        font-family: var(--font-sans);
+      }
+
+      .kpi-delta {
+        font-size: 0.7rem;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.2rem;
+        padding: 0.1rem 0.35rem;
+        border-radius: 4px;
+        background: var(--badge-ok-bg);
+        color: var(--badge-ok-text);
+      }
+
+      .kpi-sparkline-wrapper {
+        height: 24px;
+        width: 100%;
+        margin-top: 0.2rem;
+      }
+
+      .kpi-sparkline-wrapper svg {
+        width: 100%;
+        height: 100%;
+        overflow: visible;
+      }
+
+      /* Analytics Row */
+      .analytics-row {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 1rem;
+      }
+
+      @media (max-width: 850px) {
+        .analytics-row { grid-template-columns: 1fr; }
+      }
+
+      .chart-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 1.25rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+      }
+
+      .chart-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .chart-tabs {
+        display: flex;
+        gap: 0.25rem;
+        background: var(--bg-canvas);
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        padding: 0.15rem;
+      }
+
+      .chart-tab {
+        background: none;
+        border: none;
+        padding: 0.25rem 0.55rem;
+        font-family: var(--font-sans);
+        font-size: 0.7rem;
+        font-weight: 500;
+        color: var(--text-secondary);
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.12s ease;
+      }
+
+      .chart-tab.active {
+        background: var(--bg-card);
+        color: var(--text-primary);
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      }
+
+      .chart-container {
+        position: relative;
+        height: 180px;
+        width: 100%;
+      }
+
+      .chart-container svg {
+        width: 100%;
+        height: 100%;
+      }
+
+      .chart-tooltip {
+        position: absolute;
+        pointer-events: none;
+        background: var(--text-primary);
+        color: var(--bg-card);
+        padding: 0.35rem 0.6rem;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-family: var(--font-mono);
+        white-space: nowrap;
+        opacity: 0;
+        transform: translate(-50%, -120%);
+        transition: opacity 0.15s ease;
+        z-index: 10;
+      }
+
+      /* Stacked Bar Distribution */
+      .distribution-bar-wrapper {
+        height: 10px;
+        background: var(--bg-card-inner);
+        border-radius: 5px;
+        overflow: hidden;
+        display: flex;
+        gap: 2px;
+        margin: 0.5rem 0;
+      }
+
+      .distribution-segment {
+        height: 100%;
+        background: var(--text-primary);
+        transition: width 0.3s ease;
+      }
+
+      .distribution-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.6rem;
+        margin-top: 0.5rem;
+      }
+
+      .distribution-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 0.75rem;
+      }
+
+      .provider-brand {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-weight: 500;
+      }
+
+      .provider-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--text-primary);
+      }
+
+      /* AI Insights Grid */
+      .insights-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1rem;
+      }
+
+      @media (max-width: 900px) {
+        .insights-grid { grid-template-columns: repeat(2, 1fr); }
+      }
+
+      @media (max-width: 550px) {
+        .insights-grid { grid-template-columns: 1fr; }
+      }
+
+      .insight-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 1rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
+        transition: border-color 0.15s ease;
+      }
+
+      .insight-card:hover {
+        border-color: var(--border-color-hover);
+      }
+
+      .insight-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .insight-badge {
+        font-size: 0.65rem;
+        font-family: var(--font-mono);
+        font-weight: 600;
+        padding: 0.15rem 0.4rem;
+        border-radius: 4px;
+        background: var(--bg-card-inner);
+        color: var(--text-secondary);
+      }
+
+      .insight-title {
+        font-weight: 600;
+        font-size: 0.82rem;
+        color: var(--text-primary);
+
+      }
+
+      .insight-desc {
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+        line-height: 1.4;
+      }
+
+      /* Provider Grid */
+      .providers-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+        gap: 1rem;
+      }
+
+      .provider-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 1rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        cursor: pointer;
+        transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+      }
+
+      .provider-card:hover {
+        border-color: var(--text-primary);
+        transform: translateY(-2px);
+        border-color: var(--border-color-hover);
+      }
+
+      .provider-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .provider-name {
+        font-weight: 600;
+        font-size: 0.9rem;
+      }
+
+      .provider-status {
+        font-size: 0.65rem;
+        font-family: var(--font-mono);
+        padding: 0.15rem 0.45rem;
+        border-radius: 9999px;
+        font-weight: 500;
+      }
+
+      .provider-status.ok {
+        background: var(--badge-ok-bg);
+        color: var(--badge-ok-text);
+      }
+
+      .provider-status.error {
+        background: var(--badge-err-bg);
+        color: var(--badge-err-text);
+      }
+
+      .provider-cost {
+        font-size: 1.4rem;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+      }
+
+      .progress-bar-small {
+        height: 4px;
+        background: var(--border-color);
+        border-radius: 2px;
+        overflow: hidden;
+      }
+
+      .progress-fill-small {
+        height: 100%;
+        background: var(--text-primary);
+      }
+
+      /* Linear / GitHub-style Table */
+      .table-wrapper {
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        overflow-x: auto;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.8rem;
+      }
+
+      thead {
+        position: sticky;
+        top: 0;
+        z-index: 5;
+      }
+
+      th {
+        background: var(--bg-card-inner);
+        font-weight: 600;
+        color: var(--text-secondary);
+        border-bottom: 1px solid var(--border-color);
+        text-transform: uppercase;
+        font-size: 0.68rem;
+        letter-spacing: 0.05em;
+        padding: 0.6rem 1rem;
+        text-align: left;
+        user-select: none;
+      }
+
+      th.sortable {
+        cursor: pointer;
+      }
+
+      th.sortable:hover {
+        color: var(--text-primary);
+      }
+
+      td {
+        padding: 0.65rem 1rem;
+        border-bottom: 1px solid var(--border-color);
+        color: var(--text-primary);
+      }
+
+      tr:last-child td {
+        border-bottom: none;
+      }
+
+      tr.table-row:hover {
+        background: var(--bg-card-hover);
+      }
+
+      td.num, th.num {
+        text-align: right !important;
+        font-family: var(--font-mono);
+        font-variant-numeric: tabular-nums;
+      }
+
+      .copy-btn {
+        background: none;
+        border: none;
+        color: var(--text-tertiary);
+        cursor: pointer;
+        margin-left: 0.4rem;
+        transition: color 0.12s ease;
+      }
+
+      .copy-btn:hover {
+        color: var(--text-primary);
+      }
+
+      .model-name-cell {
+        display: flex;
+        align-items: center;
+        font-family: var(--font-mono);
+        font-size: 0.78rem;
+      }
+
+      /* Modal Styling */
+      .modal-overlay {
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0, 0, 0, 0.4);
+        backdrop-filter: blur(2px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.2s ease;
+      }
+
+      .modal-overlay.active {
+        opacity: 1;
+        pointer-events: auto;
+      }
+
+      .modal-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 10px;
+        width: 100%;
+        max-width: 480px;
+        padding: 1.5rem;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+        display: flex;
+        flex-direction: column;
+        gap: 1.2rem;
+      }
+
+      .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid var(--border-color);
+        padding-bottom: 0.75rem;
+      }
+
+      .modal-title {
+        font-weight: 600;
+        font-size: 1rem;
+      }
+
+      .modal-close {
+        background: none;
+        border: none;
+        color: var(--text-secondary);
+        cursor: pointer;
+        font-size: 1.1rem;
+      }
+
+      @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(8px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+
+      @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+      }
+
+      .spinning {
+        animation: spin 0.8s linear infinite;
+      }
     </style>
   </head>
   <body>
-    <h1>CostLens</h1>
-    <p class="muted" id="status">Loading…</p>
+    <div class="window">
+      <!-- Toolbar Header -->
+      <header class="toolbar">
+        <div class="toolbar-left">
+          <div class="logo-mark">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+            <span>CostLens</span>
+          </div>
+          <div class="search-box">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+            <input type="text" id="global-search" placeholder="Search models, providers..." autocomplete="off">
+            <kbd class="shortcut-kbd">⌘K</kbd>
+          </div>
+        </div>
+        <div class="toolbar-right">
+          <select id="period-select" class="toolbar-select">
+            <option value="today">Today</option>
+            <option value="7d">7 Days</option>
+            <option value="30d" selected>30 Days</option>
+            <option value="all">All Time</option>
+          </select>
+          <button id="refresh-btn" class="toolbar-btn" title="Refresh Data (R)">
+            <svg id="refresh-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+            <span>Refresh</span>
+          </button>
+          <div class="dropdown-wrapper">
+            <button id="export-btn" class="toolbar-btn">
+              <span>Export</span>
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+            </button>
+            <div id="export-menu" class="dropdown-menu">
+              <button class="dropdown-item" id="export-csv">Export CSV</button>
+              <button class="dropdown-item" id="export-json">Export JSON</button>
+            </div>
+          </div>
+          <button id="settings-btn" class="toolbar-btn icon-only" title="Settings">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+          </button>
+          <button id="theme-toggle" class="toolbar-btn" aria-label="Toggle Theme">Dark</button>
+        </div>
+      </header>
 
-    <h2>Totals</h2>
-    <div class="cards" id="totals"></div>
+      <div class="window-content">
+        <!-- KPI Cards Grid -->
+        <div id="sec-kpis">
+          <div class="kpi-grid" id="kpi-grid">
+            <!-- Populated dynamically -->
+          </div>
+        </div>
 
-    <h2>Most used models</h2>
-    <table id="models">
-      <thead>
-        <tr><th>Model</th><th class="num">Cost</th><th class="num">In</th><th class="num">Out</th><th class="num">Reqs</th></tr>
-      </thead>
-      <tbody></tbody>
-    </table>
+        <!-- Interactive Analytics Row -->
+        <div id="sec-analytics" class="analytics-row">
+          <!-- Usage Over Time Chart -->
+          <div class="chart-card">
+            <div class="chart-header">
+              <h2>Usage Over Time</h2>
+              <div class="chart-tabs">
+                <button class="chart-tab active" data-metric="cost">Cost</button>
+                <button class="chart-tab" data-metric="inputTokens">In Tokens</button>
+                <button class="chart-tab" data-metric="outputTokens">Out Tokens</button>
+                <button class="chart-tab" data-metric="requests">Requests</button>
+              </div>
+            </div>
+            <div class="chart-container" id="chart-container">
+              <svg id="main-chart-svg" viewBox="0 0 500 160" preserveAspectRatio="none">
+                <!-- SVG path rendered in JS -->
+              </svg>
+              <div id="chart-tooltip" class="chart-tooltip"></div>
+            </div>
+          </div>
 
-    <h2>Providers</h2>
-    <div class="providers" id="providers"></div>
+          <!-- Provider Distribution -->
+          <div class="chart-card">
+            <div class="chart-header">
+              <h2>Provider Distribution</h2>
+            </div>
+            <div class="distribution-bar-wrapper" id="dist-bar">
+              <!-- Rendered dynamically -->
+            </div>
+            <div class="distribution-list" id="dist-list">
+              <!-- Rendered dynamically -->
+            </div>
+          </div>
+        </div>
+
+        <!-- AI Insights Section -->
+        <div id="sec-insights">
+          <div class="section-title-row">
+            <h2>AI Insights</h2>
+          </div>
+          <div class="insights-grid" id="insights-grid">
+            <!-- Populated dynamically -->
+          </div>
+        </div>
+
+        <!-- Providers Grid -->
+        <div id="sec-providers">
+          <div class="section-title-row">
+            <h2>Providers</h2>
+          </div>
+          <div class="providers-grid" id="providers">
+            <!-- Populated dynamically -->
+          </div>
+        </div>
+
+        <!-- Most Used Models Table -->
+        <div id="sec-models">
+          <div class="section-title-row">
+            <h2>Most Used Models</h2>
+            <div class="section-search-box">
+              <input type="text" id="table-search" placeholder="Search models..." class="section-search-input" autocomplete="off">
+            </div>
+          </div>
+          <div class="table-wrapper">
+            <table id="models">
+              <thead>
+                <tr>
+                  <th class="sortable" data-sort="model">Model Name <span class="sort-icon" id="sort-icon-model">↕</span></th>
+                  <th class="sortable" data-sort="provider">Provider <span class="sort-icon" id="sort-icon-provider">↕</span></th>
+                  <th class="num sortable" data-sort="tokens">Total Usage <span class="sort-icon" id="sort-icon-tokens">↓</span></th>
+                  <th class="num sortable" data-sort="requests">Requests <span class="sort-icon" id="sort-icon-requests">↕</span></th>
+                  <th class="num sortable" data-sort="cost">Estimated Cost <span class="sort-icon" id="sort-icon-cost">↕</span></th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="modal-overlay">
+      <div class="modal-card">
+        <div class="modal-header">
+          <span class="modal-title">CostLens Settings</span>
+          <button class="modal-close" id="modal-close">✕</button>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 0.8rem; font-size: 0.8rem;">
+          <div>
+            <strong>Polling Frequency:</strong> 30 seconds (automatic background sync)
+          </div>
+          <div>
+            <strong>Database Storage:</strong> Local SQLite (`~/.opencode/opencode.db`)
+          </div>
+          <div>
+            <strong>Configured Adapters:</strong> DeepSeek, Groq, Nous, OpenCode, Antigravity, OpenRouter
+          </div>
+          <div style="border-top: 1px solid var(--border-color); padding-top: 0.8rem;">
+            <strong>Dashboard Sections Visibility:</strong>
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.4rem 1rem; margin-top: 0.5rem;" id="section-toggles">
+              <!-- Rendered dynamically -->
+            </div>
+          </div>
+          <div style="border-top: 1px solid var(--border-color); padding-top: 0.8rem;">
+            <strong>Provider Cards Visibility:</strong>
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.4rem 1rem; margin-top: 0.5rem;" id="provider-toggles">
+              <!-- Rendered dynamically -->
+            </div>
+          </div>
+          <div style="border-top: 1px solid var(--border-color); padding-top: 0.8rem;">
+            <strong>Keyboard Shortcuts:</strong>
+            <div style="display: flex; gap: 1rem; margin-top: 0.4rem; font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-secondary);">
+              <span><kbd class="shortcut-kbd">⌘K</kbd> Search</span>
+              <span><kbd class="shortcut-kbd">R</kbd> Refresh</span>
+              <span><kbd class="shortcut-kbd">Esc</kbd> Close</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Provider Details Modal -->
+    <div id="provider-modal" class="modal-overlay">
+      <div class="modal-card" style="max-width: 720px; width: 92%;">
+        <div class="modal-header">
+          <div style="display: flex; align-items: center; gap: 0.6rem;">
+            <span class="modal-title" id="provider-modal-title">Provider Details</span>
+            <span class="provider-status ok" id="provider-modal-status">Synced</span>
+          </div>
+          <button class="modal-close" id="provider-modal-close">✕</button>
+        </div>
+        <div id="provider-modal-content" style="display: flex; flex-direction: column; gap: 1.2rem; max-height: 75vh; overflow-y: auto; padding-right: 0.2rem;">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+    </div>
 
     <script define:vars={{ pollMs }}>
       const $ = (id) => document.getElementById(id);
       const fmt = (n) => (n ?? 0).toLocaleString();
       const money = (n) => "$" + (n ?? 0).toFixed(2);
 
+      let currentPeriod = "30d";
+      let currentData = null;
+      let sortKey = "tokens";
+      let sortAsc = false;
+      let currentMetric = "cost";
+      let filterQuery = "";
+      let tableFilterQuery = "";
+
       async function load() {
+        const refreshIcon = $("refresh-icon");
+        if (refreshIcon) refreshIcon.classList.add("spinning");
+
         try {
-          const res = await fetch("/api/usage");
+          const res = await fetch(`/api/usage?period=${currentPeriod}`);
           const data = await res.json();
-          render(data);
-          $("status").textContent = "Updated " + new Date(data.generatedAt).toLocaleString();
+          currentData = data;
+          render();
         } catch (e) {
-          $("status").textContent = "Error: " + e.message;
+          console.error(e);
+        } finally {
+          if (refreshIcon) refreshIcon.classList.remove("spinning");
         }
       }
 
-      function render(data) {
+      function render() {
+        if (!currentData) return;
+        const data = currentData;
         const t = data.totals;
-        $("totals").innerHTML = `
-          <div class="card"><div class="muted">Total cost</div><div class="big">${money(t.cost)}</div></div>
-          <div class="card"><div class="muted">Input tokens</div><div class="big">${fmt(t.inputTokens)}</div></div>
-          <div class="card"><div class="muted">Output tokens</div><div class="big">${fmt(t.outputTokens)}</div></div>
-        `;
 
-        const mbody = $("models").querySelector("tbody");
-        mbody.innerHTML = (t.mostUsedModels || []).map((m) => `
-          <tr><td>${m.model}</td><td class="num">${money(m.cost)}</td>
-          <td class="num">${fmt(m.inputTokens)}</td><td class="num">${fmt(m.outputTokens)}</td>
-          <td class="num">${fmt(m.requests)}</td></tr>`).join("") || `<tr><td colspan="5" class="muted">No data</td></tr>`;
+        // 1. Render KPI Cards
+        renderKPICards(t, data.timeSeries || []);
 
-        $("providers").innerHTML = (data.providers || []).map((p) => {
-          const cls = !p.ok ? "err" : p.note ? "note" : "";
-          const badge = !p.ok ? "error" : p.note ? "stub" : "ok";
-          const msg = p.error || p.note || `${p.byModel.length} models`;
-          return `<div class="card provider">
-            <div class="name">${p.name} <span class="badge ${cls}">${badge}</span></div>
-            <div class="big">${money(p.totalCost)}</div>
-            <div class="${cls}">${msg}</div>
-          </div>`;
-        }).join("") || `<div class="card muted">No providers enabled</div>`;
+        // 2. Render Usage Over Time Chart
+        renderChart(data.timeSeries || [], currentMetric);
+
+        // 3. Render Provider Distribution
+        renderDistribution(data.providers || [], t.cost);
+
+        // 4. Render AI Insights
+        renderInsights(data.insights || []);
+
+        // 5. Render Provider Cards
+        renderProviders(data.providers || [], t.cost);
+
+        // 6. Render Models Table
+        renderTable(t.mostUsedModels || []);
       }
 
+      function renderKPICards(t, timeSeries) {
+        const kpis = [
+          {
+            label: "Estimated Cost",
+            value: money(t.cost),
+            delta: `▲ ${t.costChangePct}% vs prev`,
+            sparkline: timeSeries.map(p => p.cost),
+            icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>`
+          },
+          {
+            label: "Input Tokens",
+            value: fmt(t.inputTokens),
+            delta: `▲ ${t.inputTokenChangePct}% vs prev`,
+            sparkline: timeSeries.map(p => p.inputTokens),
+            icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>`
+          },
+          {
+            label: "Output Tokens",
+            value: fmt(t.outputTokens),
+            delta: `▲ ${t.outputTokenChangePct}% vs prev`,
+            sparkline: timeSeries.map(p => p.outputTokens),
+            icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>`
+          },
+          {
+            label: "Total Requests",
+            value: fmt(t.requests),
+            delta: `▲ ${t.requestChangePct}% vs prev`,
+            sparkline: timeSeries.map(p => p.requests),
+            icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`
+          }
+        ];
+
+        $("kpi-grid").innerHTML = kpis.map((k) => `
+          <div class="kpi-card">
+            <div class="kpi-header">
+              <span class="kpi-label">${k.label}</span>
+              <span class="kpi-icon">${k.icon}</span>
+            </div>
+            <div class="kpi-body">
+              <span class="kpi-value">${k.value}</span>
+              <span class="kpi-delta">${k.delta}</span>
+            </div>
+            <div class="kpi-sparkline-wrapper">
+              ${renderSparklineSVG(k.sparkline)}
+            </div>
+          </div>
+        `).join("");
+      }
+
+      function renderSparklineSVG(values) {
+        if (!values || values.length < 2) return "";
+        const max = Math.max(...values) || 1;
+        const min = Math.min(...values);
+        const pts = values.map((v, i) => {
+          const x = (i / (values.length - 1)) * 100;
+          const y = 20 - ((v - min) / (max - min || 1)) * 16;
+          return `${x},${y}`;
+        }).join(" ");
+
+        return `<svg viewBox="0 0 100 24" preserveAspectRatio="none">
+          <polyline fill="none" stroke="var(--chart-line)" stroke-width="1.5" stroke-linecap="round" points="${pts}" />
+        </svg>`;
+      }
+
+      function renderChart(timeSeries, metric) {
+        const svg = $("main-chart-svg");
+        if (!timeSeries || timeSeries.length === 0) return;
+
+        const vals = timeSeries.map(p => p[metric]);
+        const max = Math.max(...vals) || 1;
+
+        const width = 500;
+        const height = 160;
+
+        const coords = timeSeries.map((p, i) => {
+          const x = (i / (timeSeries.length - 1)) * width;
+          const y = height - 20 - (p[metric] / max) * (height - 40);
+          return { x, y, data: p };
+        });
+
+        let pathD = `M ${coords[0].x} ${coords[0].y}`;
+        for (let i = 1; i < coords.length; i++) {
+          pathD += ` L ${coords[i].x} ${coords[i].y}`;
+        }
+
+        const areaD = `${pathD} L ${width} ${height} L 0 ${height} Z`;
+
+        svg.innerHTML = `
+          <defs>
+            <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="var(--chart-line)" stop-opacity="0.12"/>
+              <stop offset="100%" stop-color="var(--chart-line)" stop-opacity="0.0"/>
+            </linearGradient>
+          </defs>
+          <path d="${areaD}" fill="url(#chartGrad)"/>
+          <path d="${pathD}" fill="none" stroke="var(--chart-line)" stroke-width="2" stroke-linecap="round"/>
+          ${coords.map(c => `<circle cx="${c.x}" cy="${c.y}" r="3.5" fill="var(--bg-card)" stroke="var(--chart-line)" stroke-width="1.5" class="chart-point" data-val="${c.data[metric]}" data-date="${c.data.date}"/>`).join("")}
+        `;
+      }
+
+      function renderDistribution(providers, totalCost) {
+        const valid = providers.filter(p => p.ok && p.totalCost > 0);
+        if (valid.length === 0) {
+          $("dist-bar").innerHTML = `<div style="width: 100%; height: 100%; background: var(--border-color);"></div>`;
+          $("dist-list").innerHTML = `<div class="muted" style="font-size: 0.75rem; text-align: center;">No spend data</div>`;
+          return;
+        }
+
+        const barSegs = valid.map(p => {
+          const pct = ((p.totalCost / (totalCost || 1)) * 100).toFixed(1);
+          return `<div class="distribution-segment" style="width: ${pct}%;" title="${p.name}: ${pct}%"></div>`;
+        }).join("");
+
+        const listItems = valid.map(p => {
+          const pct = ((p.totalCost / (totalCost || 1)) * 100).toFixed(1);
+          return `
+            <div class="distribution-item">
+              <div class="provider-brand">
+                <span class="provider-dot"></span>
+                <span>${p.name}</span>
+              </div>
+              <div style="font-family: var(--font-mono); color: var(--text-secondary);">
+                ${money(p.totalCost)} <span style="opacity: 0.6;">(${pct}%)</span>
+              </div>
+            </div>
+          `;
+        }).join("");
+
+        $("dist-bar").innerHTML = barSegs;
+        $("dist-list").innerHTML = listItems;
+      }
+
+      function renderInsights(insights) {
+        $("insights-grid").innerHTML = insights.map(ins => `
+          <div class="insight-card">
+            <div class="insight-header">
+              <span class="insight-title">${ins.title}</span>
+              ${ins.metric ? `<span class="insight-badge">${ins.metric}</span>` : ''}
+            </div>
+            <div class="insight-desc">${ins.description}</div>
+          </div>
+        `).join("");
+      }
+
+      let hiddenProviders = [];
+      try {
+        hiddenProviders = JSON.parse(localStorage.getItem("costlens_hidden") || "[]");
+      } catch (_) {}
+
+      function renderProviders(providers, totalCost) {
+        const visible = (providers || []).filter(p => !hiddenProviders.includes(p.id));
+
+        $("providers").innerHTML = visible.map((p) => {
+          const cls = !p.ok ? "error" : "ok";
+          const badgeText = !p.ok ? "Error" : "Synced 2m ago";
+          const totalTokens = (p.totalInputTokens || 0) + (p.totalOutputTokens || 0);
+          const sharePct = totalCost > 0 ? Math.round((p.totalCost / totalCost) * 100) : 0;
+
+          const modelsSorted = [...(p.byModel || [])].sort((a, b) => (b.inputTokens + b.outputTokens) - (a.inputTokens + a.outputTokens));
+
+          const noteText = p.note ? p.note : null;
+
+          return `<div class="provider-card" data-provider-id="${p.id}">
+            <div class="provider-header">
+              <span class="provider-name">${p.name}</span>
+              <span class="provider-status ${cls}">${badgeText}</span>
+            </div>
+            <div class="provider-cost">${money(p.totalCost)} <span style="font-size: 0.7rem; color: var(--text-tertiary); font-weight: normal;">spent</span></div>
+            ${noteText ? `<div style="font-size: 0.72rem; font-family: var(--font-mono); color: var(--badge-ok-text); background: var(--badge-ok-bg); padding: 0.2rem 0.4rem; border-radius: 4px; border: 1px solid var(--badge-ok-border); font-weight: 500; text-align: center; margin-bottom: 0.4rem;">${noteText}</div>` : ''}
+            <div style="font-size: 0.72rem; color: var(--text-secondary); display: flex; justify-content: space-between;">
+              <span>${sharePct}% of total spend</span>
+              <span>${fmt(totalTokens)} Tokens</span>
+            </div>
+            <div class="progress-bar-small">
+              <div class="progress-fill-small" style="width: ${sharePct}%;"></div>
+            </div>
+            <div style="font-size: 0.72rem; color: var(--text-tertiary); display: flex; justify-content: space-between; margin-top: 0.2rem;">
+              <span>${p.byModel.length} Models active</span>
+              <span style="text-decoration: underline; color: var(--text-secondary);">Click for details ↗</span>
+            </div>
+          </div>`;
+        }).join("") || `<div class="card muted" style="grid-column: 1/-1; text-align: center; padding: 1.5rem; font-size: 0.8rem; color: var(--text-tertiary);">No matching providers found</div>`;
+
+        // Attach provider modal click listener
+        document.querySelectorAll(".provider-card").forEach(card => {
+          card.addEventListener("click", () => {
+            const id = card.getAttribute("data-provider-id");
+            openProviderModal(id);
+          });
+        });
+      }
+
+      function renderTable(models) {
+        try {
+          const q = (tableFilterQuery || filterQuery || "").trim().toLowerCase();
+          const filtered = (models || []).filter(m => {
+            if (!m) return false;
+            const pId = (m.provider || "").toLowerCase().replace(/\s+/g, "");
+            if (hiddenProviders.includes(pId)) return false;
+            if (!q) return true;
+            return (m.model || "").toLowerCase().includes(q) || (m.provider || "").toLowerCase().includes(q);
+          });
+
+          const sorted = [...filtered].sort((a, b) => {
+            let valA, valB;
+            if (sortKey === "model") {
+              valA = (a.model || "").toLowerCase(); valB = (b.model || "").toLowerCase();
+            } else if (sortKey === "provider") {
+              valA = (a.provider || "").toLowerCase(); valB = (b.provider || "").toLowerCase();
+            } else if (sortKey === "requests") {
+              valA = a.requests || 0; valB = b.requests || 0;
+            } else if (sortKey === "cost") {
+              valA = a.cost || 0; valB = b.cost || 0;
+            } else {
+              valA = (a.inputTokens || 0) + (a.outputTokens || 0);
+              valB = (b.inputTokens || 0) + (b.outputTokens || 0);
+            }
+
+            if (valA < valB) return sortAsc ? -1 : 1;
+            if (valA > valB) return sortAsc ? 1 : -1;
+            return 0;
+          });
+
+          const maxTokens = Math.max(...(models || []).map(m => (m.inputTokens || 0) + (m.outputTokens || 0)), 1);
+
+          const mbody = $("models") ? $("models").querySelector("tbody") : null;
+          if (!mbody) return;
+
+          mbody.innerHTML = sorted.map((m) => {
+            const totTokens = (m.inputTokens || 0) + (m.outputTokens || 0);
+            const barWidth = Math.round((totTokens / maxTokens) * 100);
+            const modelName = m.model || "unknown-model";
+            return `
+            <tr class="table-row">
+              <td>
+                <div class="model-name-cell">
+                  <span>${modelName}</span>
+                  <button class="copy-btn" data-copy="${modelName}" title="Copy Model Name">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                  </button>
+                </div>
+              </td>
+              <td>${m.provider || "—"}</td>
+              <td class="num">
+                <div>${fmt(totTokens)}</div>
+                <div style="height: 3px; background: var(--border-color); border-radius: 2px; margin-top: 3px; overflow: hidden; width: 60px; margin-left: auto;">
+                  <div style="height: 100%; width: ${barWidth}%; background: var(--text-primary);"></div>
+                </div>
+              </td>
+              <td class="num">${fmt(m.requests || 0)}</td>
+              <td class="num">${money(m.cost || 0)}</td>
+            </tr>`;
+          }).join("") || `<tr><td colspan="5" class="muted" style="text-align: center; padding: 2rem;">No matching models found</td></tr>`;
+
+          // Attach copy listener
+          document.querySelectorAll(".copy-btn").forEach(btn => {
+            btn.addEventListener("click", (e) => {
+              e.stopPropagation();
+              const text = btn.getAttribute("data-copy");
+              if (text) navigator.clipboard.writeText(text);
+              btn.style.color = "var(--badge-ok-text)";
+              setTimeout(() => btn.style.color = "var(--text-tertiary)", 1200);
+            });
+          });
+        } catch (err) {
+          console.error("renderTable error:", err);
+        }
+      }
+
+      // Chart metric tabs switch
+      document.querySelectorAll(".chart-tab").forEach(tab => {
+        tab.addEventListener("click", () => {
+          document.querySelectorAll(".chart-tab").forEach(t => t.classList.remove("active"));
+          tab.classList.add("active");
+          currentMetric = tab.getAttribute("data-metric");
+          if (currentData) renderChart(currentData.timeSeries || [], currentMetric);
+        });
+      });
+
+      // Sort handlers
+      document.querySelectorAll("th.sortable").forEach(th => {
+        th.addEventListener("click", () => {
+          const key = th.getAttribute("data-sort");
+          if (sortKey === key) {
+            sortAsc = !sortAsc;
+          } else {
+            sortKey = key;
+            sortAsc = false;
+          }
+          if (currentData) renderTable(currentData.totals.mostUsedModels || []);
+        });
+      });
+
+      // Global Search input
+      const searchInput = $("global-search");
+      searchInput.addEventListener("input", (e) => {
+        filterQuery = e.target.value;
+        if (currentData) {
+          renderTable(currentData.totals.mostUsedModels || []);
+        }
+      });
+
+      // Table Search input
+      const tableSearchInput = $("table-search");
+      if (tableSearchInput) {
+        tableSearchInput.addEventListener("input", (e) => {
+          tableFilterQuery = e.target.value;
+          if (currentData) {
+            renderTable(currentData.totals.mostUsedModels || []);
+          }
+        });
+      }
+
+      // Provider Modal Logic
+      const providerModal = $("provider-modal");
+      const providerModalClose = $("provider-modal-close");
+      if (providerModalClose) {
+        providerModalClose.addEventListener("click", () => {
+          if (providerModal) providerModal.classList.remove("active");
+        });
+      }
+      if (providerModal) {
+        providerModal.addEventListener("click", (e) => {
+          if (e.target === providerModal) providerModal.classList.remove("active");
+        });
+      }
+
+      function openProviderModal(providerId) {
+        if (!currentData || !currentData.providers) return;
+        const p = currentData.providers.find(x => x.id === providerId);
+        if (!p) return;
+
+        $("provider-modal-title").textContent = `${p.name} Breakdown & Quotas`;
+        const statusEl = $("provider-modal-status");
+        statusEl.className = `provider-status ${p.ok ? 'ok' : 'error'}`;
+        statusEl.textContent = p.ok ? "Synced" : "Error";
+
+        const limitsHtml = (p.limits || []).map(l => {
+          let limitStr = l.limit !== null ? `${l.used} / ${l.limit} ${l.unit}` : `${l.used} ${l.unit}`;
+          return `
+            <div style="background: var(--bg-card); border: 1px solid var(--border-color); padding: 0.6rem 0.8rem; border-radius: 6px; display: flex; flex-direction: column; gap: 0.2rem;">
+              <span style="font-size: 0.68rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase;">${l.label}</span>
+              <span style="font-size: 0.85rem; font-family: var(--font-mono); font-weight: 600; color: var(--text-primary);">${limitStr}</span>
+            </div>
+          `;
+        }).join("");
+
+        const modelsSorted = [...(p.byModel || [])].sort((a, b) => (b.inputTokens + b.outputTokens) - (a.inputTokens + a.outputTokens));
+
+        const modelsHtml = modelsSorted.map(m => {
+          const totTokens = m.inputTokens + m.outputTokens;
+          return `
+            <tr style="border-bottom: 1px solid var(--border-color); font-size: 0.75rem;">
+              <td style="padding: 0.5rem 0.6rem; font-family: var(--font-mono); font-weight: 500;">${m.model}</td>
+              <td style="padding: 0.5rem 0.6rem; text-align: right;">${fmt(m.requests)}</td>
+              <td style="padding: 0.5rem 0.6rem; text-align: right; font-family: var(--font-mono);">${fmt(totTokens)}</td>
+              <td style="padding: 0.5rem 0.6rem; text-align: right; font-family: var(--font-mono);">${money(m.cost)}</td>
+            </tr>
+          `;
+        }).join("") || `<tr><td colspan="4" style="text-align: center; padding: 1rem; color: var(--text-tertiary);">No models listed</td></tr>`;
+
+        $("provider-modal-content").innerHTML = `
+          <div>
+            <h4 style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary); margin-bottom: 0.4rem;">Limits & Quota Parameters</h4>
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0.6rem;">
+              ${limitsHtml || '<div style="color: var(--text-tertiary); font-size: 0.75rem;">No limits recorded</div>'}
+            </div>
+          </div>
+          <div style="margin-top: 0.5rem;">
+            <h4 style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary); margin-bottom: 0.4rem;">Model Breakdown (${p.byModel.length} Active Models)</h4>
+            <div style="border: 1px solid var(--border-color); border-radius: 6px; overflow: hidden; background: var(--bg-card);">
+              <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                  <tr style="background: var(--bg-card-inner); border-bottom: 1px solid var(--border-color); font-size: 0.7rem; color: var(--text-secondary); text-align: left;">
+                    <th style="padding: 0.4rem 0.6rem;">Model Name</th>
+                    <th style="padding: 0.4rem 0.6rem; text-align: right;">Requests</th>
+                    <th style="padding: 0.4rem 0.6rem; text-align: right;">Tokens</th>
+                    <th style="padding: 0.4rem 0.6rem; text-align: right;">Cost</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${modelsHtml}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        `;
+
+        providerModal.classList.add("active");
+      }
+
+      // Period dropdown listener
+      const periodSelect = $("period-select");
+      periodSelect.addEventListener("change", (e) => {
+        currentPeriod = e.target.value;
+        load();
+      });
+
+      // Refresh button
+      $("refresh-btn").addEventListener("click", load);
+
+      // Export menu toggle
+      const exportBtn = $("export-btn");
+      const exportMenu = $("export-menu");
+      exportBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        exportMenu.classList.toggle("show");
+      });
+
+      document.addEventListener("click", () => {
+        exportMenu.classList.remove("show");
+      });
+
+      // Export CSV
+      $("export-csv").addEventListener("click", () => {
+        if (!currentData) return;
+        const models = currentData.totals.mostUsedModels || [];
+        let csv = "Model,Provider,InputTokens,OutputTokens,Requests,Cost\n";
+        models.forEach(m => {
+          csv += `"${m.model}","${m.provider || ''}",${m.inputTokens},${m.outputTokens},${m.requests},${m.cost}\n`;
+        });
+        const blob = new Blob([csv], { type: "text/csv" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `costlens-models-${currentPeriod}.csv`;
+        a.click();
+      });
+
+      // Export JSON
+      $("export-json").addEventListener("click", () => {
+        if (!currentData) return;
+        const jsonStr = JSON.stringify(currentData, null, 2);
+        const blob = new Blob([jsonStr], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `costlens-analytics-${currentPeriod}.json`;
+        a.click();
+      });
+
+      // Section visibility logic
+      let hiddenSections = [];
+      try {
+        hiddenSections = JSON.parse(localStorage.getItem("costlens_hidden_sections") || "[]");
+      } catch (_) {}
+
+      const sectionsMap = [
+        { id: "sec-kpis", name: "KPI Overview Cards" },
+        { id: "sec-analytics", name: "Charts & Analytics" },
+        { id: "sec-insights", name: "AI Insights Panel" },
+        { id: "sec-providers", name: "Provider Cards Grid" },
+        { id: "sec-models", name: "Models Breakdown Table" }
+      ];
+
+      function updateSectionVisibilities() {
+        sectionsMap.forEach(sec => {
+          const el = $(sec.id);
+          if (el) {
+            const isHidden = hiddenSections.includes(sec.id);
+            if (isHidden) {
+              el.style.display = "none";
+            } else {
+              el.style.display = sec.id === "sec-analytics" ? "grid" : "block";
+            }
+          }
+        });
+      }
+      updateSectionVisibilities();
+
+      // Settings modal toggles rendering
+      function renderSettingsToggles() {
+        if (!currentData) return;
+
+        // Section toggles
+        const secContainer = $("section-toggles");
+        if (secContainer) {
+          secContainer.innerHTML = sectionsMap.map(sec => {
+            const isVisible = !hiddenSections.includes(sec.id);
+            return `
+              <label style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.75rem; cursor: pointer; color: var(--text-primary);">
+                <input type="checkbox" class="sec-toggle-cb" data-sec-id="${sec.id}" ${isVisible ? 'checked' : ''} style="cursor: pointer; accent-color: var(--text-primary);">
+                <span>${sec.name}</span>
+              </label>
+            `;
+          }).join("");
+
+          document.querySelectorAll(".sec-toggle-cb").forEach(cb => {
+            cb.addEventListener("change", (e) => {
+              const sid = cb.getAttribute("data-sec-id");
+              if (e.target.checked) {
+                hiddenSections = hiddenSections.filter(x => x !== sid);
+              } else {
+                if (!hiddenSections.includes(sid)) hiddenSections.push(sid);
+              }
+              try {
+                localStorage.setItem("costlens_hidden_sections", JSON.stringify(hiddenSections));
+              } catch (_) {}
+              updateSectionVisibilities();
+              if (currentData) {
+                renderProviders(currentData.providers || [], currentData.totals.cost);
+                renderTable(currentData.totals.mostUsedModels || []);
+              }
+            });
+          });
+        }
+
+        // Provider toggles
+        const container = $("provider-toggles");
+        if (container && currentData.providers) {
+          container.innerHTML = currentData.providers.map(p => {
+            const isVisible = !hiddenProviders.includes(p.id);
+            return `
+              <label style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.75rem; cursor: pointer; color: var(--text-primary);">
+                <input type="checkbox" class="provider-toggle-cb" data-provider-id="${p.id}" ${isVisible ? 'checked' : ''} style="cursor: pointer; accent-color: var(--text-primary);">
+                <span>${p.name}</span>
+              </label>
+            `;
+          }).join("");
+
+          document.querySelectorAll(".provider-toggle-cb").forEach(cb => {
+            cb.addEventListener("change", (e) => {
+              const pid = cb.getAttribute("data-provider-id");
+              if (e.target.checked) {
+                hiddenProviders = hiddenProviders.filter(x => x !== pid);
+              } else {
+                if (!hiddenProviders.includes(pid)) hiddenProviders.push(pid);
+              }
+              try {
+                localStorage.setItem("costlens_hidden", JSON.stringify(hiddenProviders));
+              } catch (_) {}
+              if (currentData) {
+                renderProviders(currentData.providers || [], currentData.totals.cost);
+                renderTable(currentData.totals.mostUsedModels || []);
+              }
+            });
+          });
+        }
+      }
+
+      // Settings Modal Open Trigger
+      const modal = $("settings-modal");
+      $("settings-btn").addEventListener("click", () => {
+        renderSettingsToggles();
+        $("settings-modal").classList.add("active");
+      });
+      $("modal-close").addEventListener("click", () => modal.classList.remove("active"));
+      modal.addEventListener("click", (e) => {
+        if (e.target === modal) modal.classList.remove("active");
+      });
+
+      // Keyboard Shortcuts (⌘K / /, R, Esc)
+      document.addEventListener("keydown", (e) => {
+        if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+          e.preventDefault();
+          searchInput.focus();
+        } else if (e.key === "/" && document.activeElement !== searchInput) {
+          e.preventDefault();
+          searchInput.focus();
+        } else if (e.key.toLowerCase() === "r" && document.activeElement !== searchInput) {
+          load();
+        } else if (e.key === "Escape") {
+          modal.classList.remove("active");
+          exportMenu.classList.remove("show");
+          if (document.activeElement === searchInput) searchInput.blur();
+        }
+      });
+
+      // Theme toggle
+      const themeToggle = $("theme-toggle");
+      function updateButton() {
+        const isDark = document.documentElement.classList.contains("dark");
+        themeToggle.textContent = isDark ? "Light" : "Dark";
+      }
+
+      themeToggle.addEventListener("click", () => {
+        document.documentElement.classList.toggle("dark");
+        const isDark = document.documentElement.classList.contains("dark");
+        localStorage.setItem("theme", isDark ? "dark" : "light");
+        updateButton();
+      });
+
+      updateButton();
       load();
       setInterval(load, pollMs);
     </script>
