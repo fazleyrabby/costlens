@@ -1,5 +1,8 @@
 # CostLens
 
+<img width="903" height="770" alt="CleanShot 2026-07-24 at 23 11 08" src="https://github.com/user-attachments/assets/af4b5629-859c-449e-91a6-795c74705c09" />
+
+
 A simple, configurable dashboard for tracking AI model usage and estimated costs
 across multiple providers/endpoints — OpenRouter, Nous, DeepSeek, Groq,
 OpenCode, and Antigravity.
